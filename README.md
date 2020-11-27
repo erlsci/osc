@@ -38,9 +38,31 @@ Include one of the following in your project's `rebar.config`:
 
 TBD
 
-## Connecting to Other OSC Servers
+## Connecting to OSC Servers
 
-TBD
+The following is a demonstration using the Erlang OSC server, but first we need
+to add the default addresses to the server:
+
+``` erlang
+1> osc:add_addresses().
+```
+
+Now we can create a client connection manager and send a message to the default
+address:
+
+``` erlang
+2> osc_client:start().
+3> {ok, Pid} = osc_client:connect("localhost", 2357).
+4> osc_client:send_msg(Pid, "/debug/log_message").
+ok
+```
+
+The Erlang OSC server will then log the output:
+
+``` erlang
+=INFO REPORT==== 27-Nov-2020::14:02:22.687276 ===
+Received message: []
+```
 
 ## Running Project Tests
 

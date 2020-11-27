@@ -12,61 +12,68 @@
 ]).
 
 %% API exports
--export([start/0,
-         start_link/0,
-         send_msg/1,
-         send_bundle/1]).
+-export([start/3,
+         start_link/3
+]).
 
 %% Constants, etc.
 -define(SERVER, ?MODULE). 
+-define(GEN_SERV_OPTS, []).
 
 -record(state, {
     host,
     port,
-    socket
+    socket,
+    opts
 }).
 
 %% API
 
-start() ->
-    start_link().
+start(Host, Port, UdpOpts) ->
+    start_link(Host, Port, UdpOpts).
 
-start_link() ->
-    gen_server:start_link({global, ?SERVER}, ?MODULE, [], []).
+start_link(Host, Port, UdpOpts) ->
+    process_flag(trap_exit, true),
+    gen_server:start_link({global, ?SERVER}, ?MODULE, [Host, Port, UdpOpts], ?GEN_SERV_OPTS).
 
 %% Callbacks
 
 init([]) ->
-    {ok, Port} = application:get_env(osc, port),
-    {ok, RecBuf} = application:get_env(osc, recbuf),
-    Options = [binary, {active, once}, {recbuf, RecBuf}],
-    case gen_udp:open(Port, Options) of
-	{ok, Socket} ->
-	    Addresses = ets:new(?ETS_TABLE, [named_table, ordered_set]),
-	    {ok, #state{socket = Socket, addresses = Addresses}};
-	{error, Reason} ->
-	    error_logger:error_report({?MODULE, udp_open, Reason}),
-	    {stop, {?MODULE, udp_open, Reason}}
-    end.
+    {ok, #state{}};
+init([Host, Port, UdpOpts]) ->
+    {ok, Socket} = gen_udp:open(0, UdpOpts),
+    {ok, #state{host=Host, port=Port, socket=Socket, opts=UdpOpts}}.
 
 handle_call(ping, _From, State) ->
     {reply, pong, State};
-handle_call(get_addresses, _From, State) ->
-    {reply, State#state.osc_addresses, State};
-handle_call(_Request, _From, State) ->
-    {reply, ok, State}.
+handle_call(socket, _From, State) ->
+    {reply, State#state.socket, State};
+handle_call(reconnect, _From, State) ->
+    gen_udp:close(State#state.socket),
+    {ok, Socket} = gen_udp:open(0, State#state.opts),
+    {reply, ok, State#state{socket=Socket}};
+handle_call(_Msg, _From, State) ->
+    {reply, unknown_cmd, State}.
 
-handle_cast(Msg, State) ->
-    {noreply, States}.
+handle_cast({Type, Address}, State) ->
+    Data = encode(Type, Address),
+    send_udp(State, Data),
+    {noreply, State};
+handle_cast({Type, Address, Args}, State) ->
+    Data = encode(Type, Address, Args),
+    send_udp(State, Data),
+    {noreply, State};
+handle_cast(_Msg, State) ->
+    {noreply, State}.
 
 handle_info({'EXIT', _From, normal}, State) ->
-    error_logger:error_msg("The OSC server is exiting (normal)."),
+    error_logger:error_msg("The OSC client manager is exiting (normal)."),
     {noreply, State};
 handle_info({'EXIT', _From, shutdown}, State) ->
-    error_logger:error_msg("The OSC server server is exiting (shutdown)."),
+    error_logger:error_msg("The OSC client manager is exiting (shutdown)."),
     {noreply, State};
 handle_info({'EXIT', From, Reason}, State) ->
-    io:format("OSC server process: ~p exited with reason: ~p~n",
+    io:format("OSC client manager process: ~p exited with reason: ~p~n",
 	      [From, Reason]),
     {noreply, State};
 handle_info(_Info, State) ->
@@ -81,18 +88,23 @@ terminate(_Reason, State) ->
 
 %% Private / support functions
 
-send_msg(Host, Port, [H|T]) ->
-    %% Prog is a io-list
-    P1 = lists:flatten(Prog),
-    M = ["/run-code" , "erl-id", P1],
-    Encoded = osc_lib:encode({message, H, T}),
-    send_udp(Host, Port, Encoded).
+%send_msg(Host, Port, [H|T]) ->
+%    %% Prog is a io-list
+%    P1 = lists:flatten(Prog),
+%    M = ["/run-code" , "erl-id", P1],
+%    Encoded = osc_lib:encode({message, H, T}),
+%    send_udp(Host, Port, Encoded).
 
 
-send_bundle(Host, Port, [H|T]) ->
-    .
+%send_bundle(Host, Port, [H|T]) ->
+%    .
 
-send_udp(Host, Port, Data) ->
-    {ok, Socket} = gen_udp:open(0, [binary]),
-    ok = gen_udp:send(Socket, Host, Port, Data),
-    gen_udp:close(Socket).
+encode(Type, Address) ->
+    encode(Type, Address, []).
+
+encode(Type, Address, Args) ->
+    osc_lib:encode({Type, Address, Args}).
+
+%% Pass the state and the data
+send_udp(#state{host=Host, port=Port, socket=Socket}, Data) ->
+    ok = gen_udp:send(Socket, Host, Port, Data).

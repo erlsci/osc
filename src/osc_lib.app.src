@@ -6,8 +6,14 @@
         kernel,
         stdlib
     ]},
-    {env, []},
+    {env, [
+        %% Default client settings
+        {host, "localhost"},
+        {port, 2357}, % the Erlang OSC server port
+        {udp_opts, [binary]}
+    ]},
     {modules, [
+        osc_client,
         osc_lib,
         osc_util
     ]},

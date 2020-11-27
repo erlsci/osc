@@ -107,7 +107,7 @@ handle_info({'EXIT', _From, normal}, State) ->
     error_logger:error_msg("The OSC server is exiting (normal)."),
     {noreply, State};
 handle_info({'EXIT', _From, shutdown}, State) ->
-    error_logger:error_msg("The OSC server server is exiting (shutdown)."),
+    error_logger:error_msg("The OSC server is exiting (shutdown)."),
     {noreply, State};
 handle_info({'EXIT', From, Reason}, State) ->
     io:format("OSC server process: ~p exited with reason: ~p~n",
@@ -154,7 +154,7 @@ handle_message(When, Address, Args, Addresses) ->
 	    error_logger:info_report({unhandled,{message,Address,Args}});
 	Matches ->
 	    Time = osc_util:when_to_millisecs(When),
-	    [timer:apply_after(Time, Module, Function, Args) ||
+	    [timer:apply_after(Time, Module, Function, [Args]) ||
 		[{Module, Function}] <- Matches]
     end.
 
