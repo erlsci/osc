@@ -4,8 +4,10 @@
 -export([connect/0, connect/2, connect/3,
          ping/1,
          reconnect/1,
-         send_msg/2, send_msg/3,
-         send_bundle/2, send_bundle/3,
+         call_msg/2, call_msg/3,
+         call_bundle/2, call_bundle/3,
+         cast_msg/2, cast_msg/3,
+         cast_bundle/2, cast_bundle/3,
          socket/1,
          start/0, start/2,
          stop/0, stop/1
@@ -37,20 +39,38 @@ ping(Pid) ->
 reconnect(Pid) ->
     gen_server:call(Pid, reconnect).
 
-send_msg(Pid, Address) ->
+%% Messages & bundles with a reply
+call_msg(Pid, Address) ->
+    gen_server:call(Pid, {message, Address}).
+
+call_msg(Pid, Address, Args) ->
+    gen_server:call(Pid, {message, Address, Args}).
+
+call_bundle(Pid, Address) ->
+    gen_server:call(Pid, {bundle, Address}).
+
+call_bundle(Pid, Address, Args) ->
+    gen_server:call(Pid, {bundle, Address, Args}).
+
+%% Messages & bundles with no reply
+cast_msg(Pid, Address) ->
     gen_server:cast(Pid, {message, Address}).
 
-send_msg(Pid, Address, Args) ->
+cast_msg(Pid, Address, Args) ->
     gen_server:cast(Pid, {message, Address, Args}).
 
-send_bundle(Pid, Address) ->
+cast_bundle(Pid, Address) ->
     gen_server:cast(Pid, {bundle, Address}).
 
-send_bundle(Pid, Address, Args) ->
+cast_bundle(Pid, Address, Args) ->
     gen_server:cast(Pid, {bundle, Address, Args}).
+
+%% Non-OSC API functions
 
 socket(Pid) ->
     gen_server:call(Pid, socket).
+
+%% Constructors
 
 start() ->
     start(normal, []).

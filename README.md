@@ -53,9 +53,11 @@ address:
 ``` erlang
 2> osc_client:start().
 3> {ok, Pid} = osc_client:connect("localhost", 2357).
-4> osc_client:send_msg(Pid, "/debug/log_message").
+4> osc_client:cast_msg(Pid, "/debug/log_message").
 ok
 ```
+
+No value is expected from the server, so `cast_msg` is used.
 
 The Erlang OSC server will then log the output:
 
@@ -63,6 +65,19 @@ The Erlang OSC server will then log the output:
 =INFO REPORT==== 27-Nov-2020::14:02:22.687276 ===
 Received message: []
 ```
+
+Here's an example of connecting to a SuperCollider server:
+
+``` erlang
+1> osc_client:start().
+2> {ok, Pid} = osc_client:connect("localhost", 57110).
+3> osc_client:call_msg(Pid, "/status").
+{message,"/status.reply",
+         [1,0,0,1,0,0.8447946310043335,8.175622940063477,4.41e4,
+          44101.72468382008]}
+```
+
+`call_msg` was used here since we expect a value back from the server.
 
 ## Running Project Tests
 

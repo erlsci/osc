@@ -19,6 +19,7 @@
 %% Constants, etc.
 -define(SERVER, ?MODULE). 
 -define(GEN_SERV_OPTS, []).
+-define(UDP_TIMEOUT, 2000).
 
 -record(state, {
     host,
@@ -52,16 +53,24 @@ handle_call(reconnect, _From, State) ->
     gen_udp:close(State#state.socket),
     {ok, Socket} = gen_udp:open(0, State#state.opts),
     {reply, ok, State#state{socket=Socket}};
+handle_call({Type, Address}, _From, State) ->
+    Data = encode(Type, Address),
+    Result = call_udp(State, Data, ?UDP_TIMEOUT),
+    {reply, Result, State};
+handle_call({Type, Address, Args}, _From, State) ->
+    Data = encode(Type, Address, Args),
+    Result = call_udp(State, Data, ?UDP_TIMEOUT),
+    {reply, Result, State};
 handle_call(_Msg, _From, State) ->
     {reply, unknown_cmd, State}.
 
 handle_cast({Type, Address}, State) ->
     Data = encode(Type, Address),
-    send_udp(State, Data),
+    cast_udp(State, Data),
     {noreply, State};
 handle_cast({Type, Address, Args}, State) ->
     Data = encode(Type, Address, Args),
-    send_udp(State, Data),
+    cast_udp(State, Data),
     {noreply, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -88,23 +97,22 @@ terminate(_Reason, State) ->
 
 %% Private / support functions
 
-%send_msg(Host, Port, [H|T]) ->
-%    %% Prog is a io-list
-%    P1 = lists:flatten(Prog),
-%    M = ["/run-code" , "erl-id", P1],
-%    Encoded = osc_lib:encode({message, H, T}),
-%    send_udp(Host, Port, Encoded).
-
-
-%send_bundle(Host, Port, [H|T]) ->
-%    .
-
 encode(Type, Address) ->
     encode(Type, Address, []).
 
 encode(Type, Address, Args) ->
     osc_lib:encode({Type, Address, Args}).
 
-%% Pass the state and the data
-send_udp(#state{host=Host, port=Port, socket=Socket}, Data) ->
+%% Pass the state and the data for comms with a reply
+call_udp(#state{host=Host, port=Port, socket=Socket}, Data, Timeout) ->
+    ok = gen_udp:send(Socket, Host, Port, Data),
+    receive
+        {udp, Socket, _, _, Bin} ->
+            osc_lib:decode(Bin)
+    after Timeout ->
+            {error, timeout}
+    end.
+
+%% Pass the state and the data for comms with no reply
+cast_udp(#state{host=Host, port=Port, socket=Socket}, Data) ->
     ok = gen_udp:send(Socket, Host, Port, Data).
