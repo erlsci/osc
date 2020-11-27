@@ -59,7 +59,10 @@ start() ->
 start(_StartType, _StartArgs) ->
     process_flag(trap_exit, true),
     application:ensure_started(osc_lib),
-    apply(?SUP, start_link, []).
+    case apply(?SUP, start_link, []) of
+        {ok, Pid} -> {ok, Pid};
+        {error, {_, Pid}} -> {ok, Pid}
+    end.
 
 stop() ->
     exit(?SUP, kill).
