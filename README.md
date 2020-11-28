@@ -79,6 +79,11 @@ Here's an example of connecting to a SuperCollider server:
 
 `call_msg` was used here since we expect a value back from the server.
 
+For more example usage, you may be interested in viewing the source for the
+LFE project [undertone](https://github.com/lfex/undertone). While written in
+LFE, it make extensive use of `osc_client` and might offer the curious coder
+significant insights.
+
 ## Running Project Tests
 
     rebar3 as test check
