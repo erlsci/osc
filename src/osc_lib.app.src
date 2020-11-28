@@ -1,6 +1,6 @@
 {application, osc_lib, [
     {description, "Open Sound Control Library"},
-    {vsn, "2.1.0-dev"},
+    {vsn, "2.1.0"},
     {registered, []},
     {applications, [
         kernel,

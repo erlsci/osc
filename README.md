@@ -25,12 +25,12 @@ Include one of the following in your project's `rebar.config`:
 ``` erlang
 %% Latest Release
 {deps, [
-    {osc, {git, "https://github.com/erlsci/osc", {tag, "2.0.0"}}}
+    {osc, {git, "https://github.com/erlsci/osc", {tag, "2.1.0"}}}
 ]}.
 
 %% Unstable
 {deps, [
-    {osc, {git, "https://github.com/erlsci/osc", {branch, "release/2.1.x"}}}
+    {osc, {git, "https://github.com/erlsci/osc", {branch, "release/2.2.x"}}}
 ]}.
 ```
 
